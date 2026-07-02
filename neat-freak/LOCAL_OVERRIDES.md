@@ -36,6 +36,22 @@
 
 ---
 
+## 专规：共享 wiki 层（最高优先级，2026-07-02 加入）
+
+**适用范围**：目标目录是共享 wiki 层时——Mac 路径 `~/.claude/projects/-Users-2-dogg/memory/`，J4125 claude-code 容器视角 `/root/.claude/projects/-root-work/memory/`（Syncthing 双向同步的同一份）。这是多机共享的 LLM wiki，**一切动作以该目录内 `__WIKI_SCHEMA__.md` 为准**，与 SKILL.md 通用规则冲突时 schema 赢。
+
+- **五步法强制**：任何写动作走 grep 旧条目 → 判定 update / supersede / delete / cross-link / new → 写 → 改 MEMORY.md → append log.md。supersede 用 schema 的旗子格式。**"毕业进 docs"机制在此层不适用**——wiki 自己就是沉淀层，没有 docs/ 目标；长期档案是特性不是膨胀。
+- **每个动作必须记账**：改 / 删 / 合并任何文件后 append log.md 一行 `## [<ISO8601+0800> <host>] <op> | <slug> | <one-line>`；纯清理（修断链、补 frontmatter、瘦身索引行）op=`lint`。host 按运行机器写（`mac-claude` / `j4125-claude` / `codex`）。**静默改文件 = 破坏共享层审计链，绝对禁止**——这是本 skill 在 wiki 层最容易犯的错。
+- **Lint 检查清单以 schema 为准**（7 项）：矛盾条目、SUPERSEDED BY 断链、`[[]]` 孤儿 / 断链、MEMORY.md 单行 >150 char 或总量 >24KB、`.sync-conflict-*` 残留、frontmatter 缺字段、type 不在 user/feedback/project/reference 四枚举。
+- **尺寸口径以 schema 为准**：MEMORY.md ≤24KB 且单行 ≤150 char（比 SKILL.md 的 25KB/200 行更紧）；单条 memory 上限仍按本文件修改 1（200 行 + 架构全图豁免）。
+- **`inbox/` 是投稿箱不是 memory**：里面的候选文件不参与盘点、不合并、不当重复条目；见非空（README.md 以外）→ 摘要里提醒走 curator 清箱流程（五步法审入 / 退稿），除非用户明确让你当 curator。`inbox/README.md` 永远保留。
+- **sync-conflict 分型**（细化修改 2）：`log.md` / `MEMORY.md` 这类 append-only 冲突可按 schema 冲突章节自动合并（按时间戳 sort + uniq）并记 `lint` 行；topic `.md` 冲突仍不自动处理，列清单等用户。
+- 红线 1（删除先列清单）与红线 2（废弃档案不删）在 wiki 层**继续有效且最优先**；schema 的 delete 判定也必须先过这两条红线。
+
+**Why**：本 skill 诞生早于 wiki schema（2026-06-29 立），不加此章会在共享层静默改文件不记账、把 inbox 候选误当重复条目、用错尺寸口径。
+
+---
+
 ## 修改 1：单条 memory 软上限 100 → 200 行
 
 默认 SKILL.md 写："单条 memory 文件 ~100 行：通常说明在塞多件事 / 写成事故复盘 → 拆成几条独立记忆"。
@@ -67,7 +83,7 @@
 
 ## 修改 3：CLAUDE.md 受众的特殊性
 
-方律的 `~/.claude/CLAUDE.md`（25 行）是**本机运行环境身份说明**（"你是 Mac mini 上的 Claude，不是 J4125 上的 Claude"），**不是项目规则手册**。
+方律的 `~/.claude/CLAUDE.md` 是**本机运行环境身份说明**（"你是 MacBook Pro 上的 Claude，不是 J4125 上的 Claude"），**不是项目规则手册**。
 
 - **不要**按 SKILL.md 默认的"项目根 CLAUDE.md"规则处理 `~/.claude/CLAUDE.md`
 - **不要**往里加"边界规则" / "命令速查" / "权限模型" — 这文件唯一职责是身份/坐标说明
@@ -79,17 +95,17 @@
 
 ## 修改 4：跨设备同步意识
 
-方律的环境涉及**多台机器同时跑 Claude / OpenClaw**：
+方律的环境涉及**多台机器同时跑多个 agent**（2026-07-02 刷新；OpenClaw 已于 2026-06-04 全面退役，被 Hermes 取代）：
 
-- 本机 Mac mini（你现在跑的位置）
-- J4125 上独立的 Claude Code 容器（不是你）
-- J4125 上独立的 OpenClaw（6 agent）
-- 办公室 Mac mini 上的 OpenClaw（110.21）
+- 本机 MacBook Pro（你现在跑的位置）：Mac Claude（host `mac-claude`）+ Codex（host `codex`）+ 本机 Hermes gateway（`~/.hermes`，host `mac-hermes`）
+- J4125（`jackie`）：独立 Claude Code 容器 `claude-code`（host `j4125-claude`，不是你）+ `hermes` 容器 7 profile（host `hermes:<profile>`，对共享 wiki 只读 + inbox 投稿）
+- 办公室 Mac mini（110.21）：已分流到独立 project `office-mac-mini-ops`，共享 wiki 不再新增其条目
 
 **判断变更影响时**：
 
-- 看到"X 在远端" / "host 名 jackie" / "/root/..." / "docker exec openclaw" 字样 → 该事实关联的是 **J4125**，不是本机
-- 看到"110.21" / "RAGFlow" 字样 → 该事实关联的是**办公室 Mac mini**
+- 看到 "host 名 jackie" / "/root/work" / "docker exec claude-code" → **J4125 的 Claude**；"/root/shared-wiki" / "docker exec hermes" / "profile" → **J4125 的 Hermes**
+- 看到 "docker exec openclaw" / "~/.openclaw" → **历史档案**（OpenClaw 已退役），不要当现役事实同步
+- 看到 "110.21" / "RAGFlow" → 办公室 Mac mini，归 office-mac-mini-ops project 管
 - 不要把本机改动误当成 J4125 改动写进 memory（反之亦然）
 - 跨设备改动要在 memory 里**明确写出影响范围**（如"本机 Mac + J4125 容器都改了"）
 
